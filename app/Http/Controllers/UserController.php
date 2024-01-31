@@ -20,7 +20,9 @@ class UserController extends Controller
 {
 
     public function mostrarFormularioLogin()
+
     {
+
         return view('email.login');
     }
     public function mostrarFormularioRegistro()
@@ -135,6 +137,9 @@ class UserController extends Controller
             abort(404);
         }
 
+
+
+
         if ($request->codigo === $user->verification_code) {
 
             $user->verification_code = null;
@@ -142,6 +147,7 @@ class UserController extends Controller
             $user->save();
 
             Auth::login($user);
+
 
             $time = now();
             Log::info('User Admin: ' . $user->name . ' (' . $user->email . ') has successfully verified the code and logged in. , Time:(' . $time . ')');
@@ -167,53 +173,47 @@ class UserController extends Controller
             return redirect('login.form')->withErrors($validacion);
         }
 
-        $credentials = $request->only('email', 'password');
+        $user = User::where('email', $request->email)->first();
 
-        if (Auth::attempt($credentials)) {
-
-            Log::info('Before user retrieval');
-            $user = User::where('email', $request->email)->first();
-            Log::info('After user retrieval', ['user' => $user]);
-
-            if ($user->rol_id != 1) {
-                Auth::login($user);
-                $time = now();
-                Log::info('User: ' . $user->name . ' (' . $user->email . ') has logged in. , Time:(' . $time . ')');
-                return redirect()->route('bienvenido');
-            } else {
-                $user->verification_code = $this->generarCodigoVerificacion();
-                $user->verification_code;
-                $user->verification_code_expires_at = now()->addMinutes(10);
-                $user->save();
-
-                if ($user->verification_code && now()->lt($user->verification_code_expires_at)) {
-                    $time = now();
-
-                    $url = URL::temporarySignedRoute('verificarCodigo', now()->addMinutes(10), ['user' => $user->id]);
-                    Log::info('User Admin: ' . $user->name . ' (' . $user->email . ') passed first Authentication Phase. , Time:(' . $time . ')');
-                    sms::dispatch($user)->onQueue('sms')->onConnection('database')->delay(now()->addSeconds(5));
-
-                    Auth::login($user);
-
-                    return redirect($url);
-                } else {
-                    Auth::logout();
-                    return redirect()->route('login.form')->withErrors([
-                        'verification' => 'Por favor, verifica tu código de verificación antes de iniciar sesión.',
-                    ]);
-                }
-            }
+        if (!$user) {
+            return redirect()->route('login.form')->withErrors(['user' => 'El usuario y/o la contraseña ingresados son incorrectos.']);
         }
 
-        return back()->withErrors([
-            'email' => 'Las credenciales proporcionadas no coinciden con nuestros registros.',
+        Log::info('After user retrieval', ['user' => $user]);
 
-        ]);
+        if ($user->rol_id != 1) {
+            $time = now();
+            Log::info('User: ' . $user->name . ' (' . $user->email . ') has logged in. , Time:(' . $time . ')');
+            Auth::login($user);
+            return redirect()->route('bienvenido');
+        } else {
+            $user->verification_code = $this->generarCodigoVerificacion();
+            $user->verification_code;
+            $user->verification_code_expires_at = now()->addMinutes(10);
+            $user->save();
+
+            if ($user->verification_code && now()->lt($user->verification_code_expires_at)) {
+                $time = now();
+
+                $url = URL::temporarySignedRoute('verificarCodigo', now()->addMinutes(5), ['user' => $user->id]);
+                Log::info('User Admin: ' . $user->name . ' (' . $user->email . ') passed first Authentication Phase. , Time:(' . $time . ')');
+                sms::dispatch($user)->onQueue('sms')->onConnection('database')->delay(now()->addSeconds(5));
+
+                return redirect($url);
+            } else {
+                Auth::logout();
+                return redirect()->route('login.form')->withErrors([
+                    'verification' => 'Por favor, verifica tu código de verificación antes de iniciar sesión.',
+                ]);
+            }
+        }
     }
 
     public function logout()
     {
-        Auth::logout();
-        return redirect()->route('login.form');
+        if (Auth::check()) {
+            Auth::logout();
+            return redirect()->route('login.form');
+        }
     }
 }

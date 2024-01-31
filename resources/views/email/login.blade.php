@@ -75,13 +75,19 @@
     <div class="card p-4">
         <h3 class="mb-4 text-center card-title">Iniciar Sesión</h3>
 
+        @if (session('errors') && session('errors')->has('user'))
+            <div class="alert alert-danger" role="alert">
+                {{ session('errors')->first('user') }}
+            </div>
+        @endif
+
         <form action="{{ route('login.submit') }}" method="post">
             @csrf
 
             <div class="mb-3">
                 <label for="email" class="form-label">Correo Electrónico:</label>
                 <input id="email" type="email" class="form-control @error('email') is-invalid @enderror"
-                    name="email" value="{{ old('email') }}" required autocomplete="email" autofocus>
+                    name="email" value="{{ old('email') }}" required autofocus>
                 @error('email')
                     <div class="invalid-feedback">
                         {{ $message }}
@@ -97,6 +103,7 @@
             <div class="d-grid">
                 <button type="submit" class="btn btn-primary btn-block">Iniciar Sesión</button>
             </div>
+
         </form>
 
         <div class="mt-4 text-center">
