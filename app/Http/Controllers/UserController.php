@@ -175,7 +175,7 @@ class UserController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user) {
+        if (!$user || !Hash::check($request->password, $user->password)) {
             return redirect()->route('login.form')->withErrors(['user' => 'El usuario y/o la contraseña ingresados son incorrectos.']);
         }
 
@@ -188,7 +188,6 @@ class UserController extends Controller
             return redirect()->route('bienvenido');
         } else {
             $user->verification_code = $this->generarCodigoVerificacion();
-            $user->verification_code;
             $user->verification_code_expires_at = now()->addMinutes(10);
             $user->save();
 

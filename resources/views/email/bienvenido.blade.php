@@ -75,33 +75,32 @@
     }
 </style>
 
-<body class="bg-dark">
+<body class="bg-dark>
 
     <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-body">
-                        @auth
-                            <h5 class="card-title">¡Hola, {{ auth()->user()->name }}!</h5>
-                            <p class="card-text">Gracias por iniciar sesión. Bienvenido de nuevo.</p>
-                            <form action="{{ route('logOut') }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-danger">Cerrar sesión</button>
-                            </form>
-                        @else
-                            <p class="card-text">Por favor, inicia sesión para ver el contenido de esta página.</p>
-                            <a href="{{ route('login.form') }}" class="btn btn-primary">Iniciar Sesión</a>
-                        @endauth
-                    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+
+                    <h5 class="card-title">¡Hola, {{ auth()->user()->name }}!</h5>
+                    <p class="card-text">Gracias por iniciar sesión. Bienvenido de nuevo.</p>
+                    <form action="{{ route('logOut') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-danger">Cerrar sesión</button>
+                    </form>
+
                 </div>
             </div>
         </div>
+    </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous">
     </script>
+
+
 
 </body>
 

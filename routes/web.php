@@ -18,16 +18,21 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/registro', [UserController::class, 'mostrarFormularioRegistro'])->name('formularioRegistro');
 route::post('/logout', [UserController::class, 'logout'])->name('logOut');
 
 
-Route::get('/bienvenido', [UserController::class, 'mostrarBienvenida'])->name('bienvenido');
+Route::group(['middleware' => 'redirectIfAuthenticated'], function () {
+    Route::get('/login', [UserController::class, 'mostrarFormularioLogin'])->name('login.form');
+    Route::post('/login', [UserController::class, 'inicioSesion'])->name('login.submit');
+    Route::post('/registro', [UserController::class, 'creaUser'])->name('registro');
+    Route::get('/registro', [UserController::class, 'mostrarFormularioRegistro'])->name('formularioRegistro');
+});
 
-Route::post('/registro', [UserController::class, 'creaUser'])->name('registro');
-Route::get('/verificar-codigo', [UserController::class, 'mostrarFormularioVerificacion'])->name('verificarCodigo');
-Route::post('/verificar-codigo', [UserController::class, 'verificarCodigo']);
 
 
-Route::get('/login', [UserController::class, 'mostrarFormularioLogin'])->name('login.form');
-Route::post('/login', [UserController::class, 'inicioSesion'])->name('login.submit');
+Route::get('/bienvenido', [UserController::class, 'mostrarBienvenida'])
+    ->name('bienvenido')->middleware('auth');
+Route::group(['middleware' => ['verificacionCompletada']], function () {
+    Route::get('/verificar-codigo', [UserController::class, 'mostrarFormularioVerificacion'])->name('verificarCodigo')->middleware('signed');
+    Route::post('/verificar-codigo', [UserController::class, 'verificarCodigo']);
+});
