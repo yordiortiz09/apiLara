@@ -12,7 +12,6 @@
 
 <style>
     body {
-        background-color: #282c35;
         color: #ffffff;
     }
 
@@ -71,7 +70,7 @@
     }
 </style>
 
-<body class="d-flex align-items-center justify-content-center vh-100">
+<body class="d-flex align-items-center justify-content-center vh-100 bg-dark">
 
     <div class="card p-4">
         <h3 class="mb-4 text-center card-title">Iniciar Sesión</h3>

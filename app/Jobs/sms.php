@@ -31,14 +31,13 @@ class sms implements ShouldQueue
      */
     public function handle(): void
     {
-        $verificationCode = $this->user->getOriginal('verification_code');
 
         Http::post('https://rest.nexmo.com/sms/json', [
             "from" => "Vonage APIs",
             'api_key' => "1edbb5f0",
             'api_secret' => "8su9DuBrJVSLewvT",
             'to' => "52{$this->user->phone}",
-            'text' => "Tu codigo de verificacion es: {$verificationCode}, sigue las instrucciones en tu correo electronico",
+            'text' => "Tu codigo de verificacion es: {$this->user->verification_code}, sigue las instrucciones en tu correo electronico",
         ]);
     }
 }

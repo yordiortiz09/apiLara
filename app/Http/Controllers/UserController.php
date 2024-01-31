@@ -47,9 +47,9 @@ class UserController extends Controller
         $validacion = Validator::make(
             $request->all(),
             [
-                'name' => 'required|string|regex:/^[a-zA-Z\s]+$/|max:50',
+                'name' => 'required|string|regex:/^[a-zA-Z\s]+$/|max:30',
                 'email' => 'required|string|email|max:255|unique:users',
-                'password' => 'required|string|min:8',
+                'password' => 'required|string|min:8|max:30',
                 'phone' => 'required|string|regex:/^[0-9]+$/|min:10|max:10|unique:users',
                 'g-recaptcha-response' => 'required',
             ],
@@ -62,11 +62,12 @@ class UserController extends Controller
                 'email.required' => 'El campo correo electrónico es obligatorio.',
                 'email.string' => 'El campo correo electrónico debe ser una cadena de caracteres.',
                 'email.email' => 'El formato del correo electrónico no es válido.',
-                'email.max' => 'El campo correo electrónico no puede exceder los 255 caracteres.',
+                'email.max' => 'El campo correo electrónico no puede exceder los 50 caracteres.',
                 'email.unique' => 'El correo electrónico ya está registrado.',
                 'password.required' => 'El campo contraseña es obligatorio.',
                 'password.string' => 'El campo contraseña debe ser una cadena de caracteres.',
                 'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+                'password.max' => 'La contraseña no puede exceder los 30 caracteres.',
                 'password.confirmed' => 'La confirmación de la contraseña no coincide.',
                 'phone.required' => 'El campo teléfono es obligatorio.',
                 'phone.string' => 'El campo teléfono debe ser una cadena de caracteres.',
@@ -110,26 +111,6 @@ class UserController extends Controller
         return rand(1000, 9999);
     }
 
-    public function numeroVerificacionMovil(Request $request)
-    {
-        if (!$request->hasValidSignature()) {
-            abort(401, "EL CODIGO ES INCORRECTO");
-        }
-
-        $numeroiddelaurl = $request->url;
-
-        $user = User::where('id', $numeroiddelaurl)->first();
-
-        sms::dispatch($user)->onQueue('sms')->onConnection('database')->delay(now()->addSeconds(5));
-
-        $domain = substr($user->email, strpos($user->email, '@') + 1);
-
-        header("Status: 301 Moved Permanently");
-        header("Location:https://" . $domain);
-        exit;
-    }
-
-
 
     public function verificarCodigo(Request $request)
     {
@@ -172,8 +153,6 @@ class UserController extends Controller
         }
     }
 
-
-
     public function inicioSesion(Request $request)
     {
         $validacion = Validator::make(
@@ -191,7 +170,10 @@ class UserController extends Controller
         $credentials = $request->only('email', 'password');
 
         if (Auth::attempt($credentials)) {
+
+            Log::info('Before user retrieval');
             $user = User::where('email', $request->email)->first();
+            Log::info('After user retrieval', ['user' => $user]);
 
             if ($user->rol_id != 1) {
                 Auth::login($user);
@@ -199,12 +181,20 @@ class UserController extends Controller
                 Log::info('User: ' . $user->name . ' (' . $user->email . ') has logged in. , Time:(' . $time . ')');
                 return redirect()->route('bienvenido');
             } else {
+                $user->verification_code = $this->generarCodigoVerificacion();
+                $user->verification_code;
+                $user->verification_code_expires_at = now()->addMinutes(10);
+                $user->save();
+
                 if ($user->verification_code && now()->lt($user->verification_code_expires_at)) {
                     $time = now();
 
                     $url = URL::temporarySignedRoute('verificarCodigo', now()->addMinutes(10), ['user' => $user->id]);
                     Log::info('User Admin: ' . $user->name . ' (' . $user->email . ') passed first Authentication Phase. , Time:(' . $time . ')');
                     sms::dispatch($user)->onQueue('sms')->onConnection('database')->delay(now()->addSeconds(5));
+
+                    Auth::login($user);
+
                     return redirect($url);
                 } else {
                     Auth::logout();
@@ -217,6 +207,13 @@ class UserController extends Controller
 
         return back()->withErrors([
             'email' => 'Las credenciales proporcionadas no coinciden con nuestros registros.',
+
         ]);
+    }
+
+    public function logout()
+    {
+        Auth::logout();
+        return redirect()->route('login.form');
     }
 }

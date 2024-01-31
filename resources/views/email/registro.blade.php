@@ -74,9 +74,15 @@
         color: #d33f1a;
         /* Naranja más oscuro */
     }
+
+    .error-message {
+        margin-top: 10px;
+        /* Ajusta según sea necesario */
+        text-align: center;
+    }
 </style>
 
-<body>
+<body class="bg-dark">
 
     <div class="card">
         <h3 class="mb-4 text-center card-title" style="color: #e44d26; font-size: 2.5rem; font-weight: bold;">
@@ -88,6 +94,9 @@
             <div class="mb-3">
                 <label for="name" class="form-label">Nombre:</label>
                 <input type="text" class="form-control" name="name" required minlength="3" maxlength="30">
+                @error('name')
+                    <div class="alert alert-danger mt-2">{{ $message }}</div>
+                @enderror
             </div>
 
             <div class="mb-3">
@@ -102,9 +111,13 @@
             <div class="mb-3">
                 <label for="password" class="form-label">Contraseña:</label>
                 <input type="password" class="form-control" name="password" required minlength="8" maxlength="30">
+                @error('password')
+                    <div class="alert alert-danger mt-2">{{ $message }}</div>
+                @enderror
+
             </div>
 
-            <div class="mb-3">
+            <div class="mb-q">
                 <label for="phone" class="form-label">Teléfono:</label>
                 <input type="text" class="form-control" name="phone" required pattern="\d{10}" maxlength="10">
 
@@ -113,23 +126,22 @@
                 @enderror
             </div>
 
-            <div class="mt-1 text-center">
+            <div class=" text-center">
                 <p>¿Ya tienes una cuenta?</p>
                 <a href="{{ route('login.form') }}" class="btn btn-link" style="color: #e44d26;">Inicia Sesión</a>
             </div>
 
 
-
-
-            <div class="mt-4 text-center d-grid">
-                <div id="html_element" class="mt-4 text-center"></div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-block"
+                    style="background-color: #e44d26; border: none; border-radius: 10px;">Registrarse</button>
+            </div>
+            <div class="d-flex flex-column align-items-center mt-4">
+                <div id="html_element" class="text-center"></div>
                 @error('g-recaptcha-response')
-                    <div class="alert alert-danger mt-2">{{ $message }}</div>
+                    <div class="alert alert-danger mt-2 error-message">{{ $message }}</div>
                 @enderror
             </div>
-
-            <button type="submit" class="btn btn-primary btn-block"
-                style="background-color: #e44d26; border: none; border-radius: 10px;">Registrarse</button>
 
 
         </form>

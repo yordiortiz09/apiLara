@@ -68,7 +68,7 @@
     }
 </style>
 
-<body class="d-flex align-items-center justify-content-center vh-100">
+<body class="d-flex align-items-center justify-content-center vh-100 bg-dark">
 
     <div class="card p-4">
         <h1 class="mb-4 text-center">Verificación de Código</h1>
@@ -88,8 +88,9 @@
             </div>
 
             <input type="hidden" name="user" value="{{ request('user') }}">
-
-            <button type="submit" class="btn btn-primary">Verificar Código</button>
+            <div class="center">
+                <button type="submit" class="btn btn-primary">Verificar Código</button>
+            </div>
         </form>
     </div>
 

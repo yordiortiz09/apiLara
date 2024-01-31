@@ -19,6 +19,8 @@ Route::get('/', function () {
 });
 
 Route::get('/registro', [UserController::class, 'mostrarFormularioRegistro'])->name('formularioRegistro');
+route::post('/logout', [UserController::class, 'logout'])->name('logOut');
+
 
 Route::get('/bienvenido', [UserController::class, 'mostrarBienvenida'])->name('bienvenido');
 
