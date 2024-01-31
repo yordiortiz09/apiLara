@@ -101,7 +101,7 @@ class UserController extends Controller
 
         try {
             $user->save();
-            Log::info('Usuario administrador registrado: ' . $user->name . ' (' . $user->email . ') , Time:(' . now() . ')');
+            Log::info("¡Registro exitoso! Nuevo usuario: {$user->name} ({$user->email}) - Fecha: " . now());
             return redirect()->route('login.form');
         } catch (\Exception $e) {
             Log::error('Error al guardar usuario: ' . $e->getMessage());
@@ -150,7 +150,7 @@ class UserController extends Controller
 
 
             $time = now();
-            Log::info('User Admin: ' . $user->name . ' (' . $user->email . ') has successfully verified the code and logged in. , Time:(' . $time . ')');
+            Log::info(" Usuario Administrador: {$user->name} ({$user->email}) ha verificado el código exitosamente y ha iniciado sesión - Hora: " . $time);
 
             return redirect()->route('bienvenido');
         } else {
@@ -179,11 +179,11 @@ class UserController extends Controller
             return redirect()->route('login.form')->withErrors(['user' => 'El usuario y/o la contraseña ingresados son incorrectos.']);
         }
 
-        Log::info('After user retrieval', ['user' => $user]);
+        Log::info("ℹInformación después de recuperar al usuario: " . json_encode(['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'role' => $user->rol_id]) . ' - Hora: ' . now());
 
         if ($user->rol_id != 1) {
             $time = now();
-            Log::info('User: ' . $user->name . ' (' . $user->email . ') has logged in. , Time:(' . $time . ')');
+            Log::info("Usuario inició sesión: " . json_encode(['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'role' => $user->rol_id]) . ' - Hora: ' . now());
             Auth::login($user);
             return redirect()->route('bienvenido');
         } else {
@@ -195,7 +195,7 @@ class UserController extends Controller
                 $time = now();
 
                 $url = URL::temporarySignedRoute('verificarCodigo', now()->addMinutes(5), ['user' => $user->id]);
-                Log::info('User Admin: ' . $user->name . ' (' . $user->email . ') passed first Authentication Phase. , Time:(' . $time . ')');
+                Log::info("Usuario administrador autenticado: " . json_encode(['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email]) . ' - Fase de autenticación completada - Hora: ' . $time);
                 sms::dispatch($user)->onQueue('sms')->onConnection('database')->delay(now()->addSeconds(5));
 
                 return redirect($url);
@@ -211,7 +211,9 @@ class UserController extends Controller
     public function logout()
     {
         if (Auth::check()) {
+            $user = Auth::user();
             Auth::logout();
+            Log::info("Usuario desconectado: " . json_encode(['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email]) . ' - Hora: ' . now());
             return redirect()->route('login.form');
         }
     }
