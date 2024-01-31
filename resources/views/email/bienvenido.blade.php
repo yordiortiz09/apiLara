@@ -5,26 +5,37 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenida</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
-    <title>REGISTRO SEGUNDO PASO</title>
 </head>
 
-<body>
-    <h1>Instrucciones para su subscription UTT <i class="bi bi-bookmarks"></i> </h1>
-    <br>
-    <h1>Hola {{ $gmail }} <i class="bi bi-house-check-fill"></i></h1>
-    <br>
+<body class="bg-light">
 
-    <h1>Regresa a la pagina y favor de poner tu codigo</h1>
-    <br>
-    <h1>Se ha enviado el codigo de confirmacion a tu dispositivo </h1>
-    <br>
-    <p>*recuerda no compartir tu informacion*</p>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">Bienvenido</div>
+
+                    <div class="card-body">
+                        @auth
+                            <h5 class="card-title">¡Hola, {{ auth()->user()->name }}!</h5>
+                            <p class="card-text">Gracias por iniciar sesión. Bienvenido de nuevo.</p>
+                        @else
+                            <p class="card-text">Por favor, inicia sesión para ver el contenido de esta página.</p>
+                            <a href="{{ route('login.form') }}" class="btn btn-primary">Iniciar Sesión</a>
+                        @endauth
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous">
+    </script>
 
 </body>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous">
-</script>
 
 </html>

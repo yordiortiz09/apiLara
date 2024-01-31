@@ -20,9 +20,11 @@ Route::get('/', function () {
 
 Route::get('/registro', [UserController::class, 'mostrarFormularioRegistro'])->name('formularioRegistro');
 
+Route::get('/bienvenido', [UserController::class, 'mostrarBienvenida'])->name('bienvenido');
+
 Route::post('/registro', [UserController::class, 'creaUser'])->name('registro');
 Route::get('/verificar-codigo', [UserController::class, 'mostrarFormularioVerificacion'])->name('verificarCodigo');
-Route::post('/verificar-codigo', [UserController::class, 'registrarSMS']);
+Route::post('/verificar-codigo', [UserController::class, 'verificarCodigo']);
 
 
 Route::get('/login', [UserController::class, 'mostrarFormularioLogin'])->name('login.form');

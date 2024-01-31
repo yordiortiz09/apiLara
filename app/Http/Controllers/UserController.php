@@ -7,6 +7,7 @@ use App\Jobs\mensajes;
 use App\Jobs\sms;
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -27,6 +28,17 @@ class UserController extends Controller
         return view('email.registro');
     }
 
+    public function mostrarFormularioVerificacion()
+    {
+        return view('email.verificarCodigo');
+    }
+
+    public function mostrarBienvenida()
+    {
+        return view('email.bienvenido');
+    }
+
+
     public function creaUser(Request $request)
     {
         srand(time());
@@ -39,8 +51,10 @@ class UserController extends Controller
                 'email' => 'required|string|email|max:255|unique:users',
                 'password' => 'required|string|min:8',
                 'phone' => 'required|string|regex:/^[0-9]+$/|min:10|max:10|unique:users',
+                'g-recaptcha-response' => 'required',
             ],
             [
+                'g-recaptcha-response.required' => 'Por favor, verifica que no eres un robot.',
                 'name.required' => 'El campo nombre es obligatorio.',
                 'name.string' => 'El campo nombre debe ser con puras letras.',
                 'name.regex' => 'Solo se permiten letras y espacios en el campo nombre.',
@@ -66,7 +80,7 @@ class UserController extends Controller
 
 
         if ($validacion->fails()) {
-            return redirect()->route('formularioRegistro')->withErrors($validacion)->withInput();
+            return redirect()->back()->withErrors($validacion)->withInput();
         }
 
         $numero_aleatorio = $this->generarCodigoVerificacion();
@@ -84,21 +98,12 @@ class UserController extends Controller
 
         try {
             $user->save();
-            Log::info('New Admin User Register: ' . $user->name . ' (' . $user->email . ') , Time:(' . now() . ')');
+            Log::info('Usuario administrador registrado: ' . $user->name . ' (' . $user->email . ') , Time:(' . now() . ')');
             return redirect()->route('login.form');
         } catch (\Exception $e) {
             Log::error('Error al guardar usuario: ' . $e->getMessage());
-            print_r($e->getMessage());
         }
     }
-
-
-    public function mostrarFormularioVerificacion()
-    {
-        return view('email.verificarCodigo');
-    }
-
-
 
     private function generarCodigoVerificacion()
     {
@@ -125,36 +130,52 @@ class UserController extends Controller
     }
 
 
-    public function registrarSMS(Request $request)
+
+    public function verificarCodigo(Request $request)
     {
-        $validacion = Validator::make($request->all(), [
-            'codigo' => 'required|digits:4'
-        ]);
+        $validacion = Validator::make(
+            $request->all(),
+            [
+                'codigo' => 'required|digits:4',
+            ],
+            [
+                'codigo.required' => 'El campo de código es obligatorio.',
+                'codigo.digits' => 'El código debe tener exactamente 4 dígitos.',
+            ]
+        );
 
         if ($validacion->fails()) {
-            return response()->json([
-                "error" => $validacion->errors()
-            ], 400);
+            return redirect()->back()->withErrors($validacion)->withInput();
         }
 
-        $user = User::where('verification_code', $request->codigo)->first();
+        $user = User::find($request->user);
 
         if (!$user) {
-            return response()->json([
-                'mensaje' => 'Usuario no encontrado',
-            ], 401);
+            abort(404);
         }
 
-        $user->status = 1;
-        $user->save();
+        if ($request->codigo === $user->verification_code) {
 
-        return view('email.login');
+            $user->verification_code = null;
+            $user->verification_code_expires_at = null;
+            $user->save();
+
+            Auth::login($user);
+
+            $time = now();
+            Log::info('User Admin: ' . $user->name . ' (' . $user->email . ') has successfully verified the code and logged in. , Time:(' . $time . ')');
+
+            return redirect()->route('bienvenido');
+        } else {
+            // Código incorrecto
+            return redirect()->back()->withErrors(['codigo' => 'El código de verificación es incorrecto.']);
+        }
     }
+
 
 
     public function inicioSesion(Request $request)
     {
-
         $validacion = Validator::make(
             $request->all(),
             [
@@ -164,67 +185,38 @@ class UserController extends Controller
         );
 
         if ($validacion->fails()) {
-            return response()->json([
-                'status' => false,
-                'mensaje' => 'Error de validación',
-                'error' => $validacion->errors()
-            ], 401);
+            return redirect('login.form')->withErrors($validacion);
         }
 
-        $user = User::where('email', $request->email)->first();
+        $credentials = $request->only('email', 'password');
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Las credenciales proporcionadas son incorrectas.'],
-            ]);
+        if (Auth::attempt($credentials)) {
+            $user = User::where('email', $request->email)->first();
+
+            if ($user->rol_id != 1) {
+                Auth::login($user);
+                $time = now();
+                Log::info('User: ' . $user->name . ' (' . $user->email . ') has logged in. , Time:(' . $time . ')');
+                return redirect()->route('bienvenido');
+            } else {
+                if ($user->verification_code && now()->lt($user->verification_code_expires_at)) {
+                    $time = now();
+
+                    $url = URL::temporarySignedRoute('verificarCodigo', now()->addMinutes(10), ['user' => $user->id]);
+                    Log::info('User Admin: ' . $user->name . ' (' . $user->email . ') passed first Authentication Phase. , Time:(' . $time . ')');
+                    sms::dispatch($user)->onQueue('sms')->onConnection('database')->delay(now()->addSeconds(5));
+                    return redirect($url);
+                } else {
+                    Auth::logout();
+                    return redirect()->route('login.form')->withErrors([
+                        'verification' => 'Por favor, verifica tu código de verificación antes de iniciar sesión.',
+                    ]);
+                }
+            }
         }
 
-        if ($user->rol_id == 1) {
-            $codigoVerificacion = $this->generarCodigoVerificacion();
-            $user->update(['verification_code' => $codigoVerificacion]);
-
-            $url = URL::temporarySignedRoute(
-                'validarnumero',
-                now()->addMinutes(20),
-                ['url' => $user->id]
-            );
-
-            mensajes::dispatch($user, $url)
-                ->onQueue('mensajes')
-                ->onConnection('database')
-                ->delay(now()->addSeconds(10));
-
-            return view('email.verificarCodigo', ['user' => $user]);
-        }
-
-        if (!$user->verification_code) {
-            return response()->json([
-                'status' => false,
-                'msg' => 'Se requiere verificación adicional.',
-                'user' => $user,
-            ], 401);
-        }
-
-        $codigoIngresado = $request->input('verification_code');
-
-        if ($codigoIngresado !== $user->verification_code) {
-            return response()->json([
-                'status' => false,
-                'msg' => 'Código de verificación incorrecto.',
-            ], 401);
-        }
-
-        $user->update(['verification_code' => null]);
-
-        auth()->login($user);
-
-        $token = $user->createToken("Token")->plainTextToken;
-
-        return response()->json([
-            'status' => true,
-            'msg' => "Inicio sesión correctamente",
-            'user' => $user,
-            'token' => $token
-        ], 201);
+        return back()->withErrors([
+            'email' => 'Las credenciales proporcionadas no coinciden con nuestros registros.',
+        ]);
     }
 }

@@ -10,11 +10,71 @@
         integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
 </head>
 
+<style>
+    body {
+        background-color: #282c35;
+        color: #ffffff;
+    }
 
-<body class="bg-light d-flex align-items-center justify-content-center vh-100">
+    .card {
+        background-color: #36383a;
+        width: 400px;
+        margin: auto;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
 
-    <div class="card p-4 shadow-lg rounded-3">
-        <h1 class="mb-4 text-center" style="font-size: 150%">Iniciar Sesión</h1>
+    .card-title {
+        font-size: 2.5rem;
+        color: #e44d26;
+        /* Naranja */
+    }
+
+    .form-control {
+        border: 1px solid #495057;
+        border-radius: 10px;
+        background-color: #495057;
+        color: #ffffff;
+        transition: box-shadow 0.3s;
+    }
+
+    .form-control:focus {
+        border-color: #e44d26;
+        /* Naranja */
+        box-shadow: 0 0 10px rgba(228, 77, 38, 0.3);
+    }
+
+    .btn-primary {
+        background-color: #e44d26;
+        /* Naranja */
+        border: none;
+        border-radius: 10px;
+        transition: background-color 0.3s;
+    }
+
+    .btn-primary:hover {
+        background-color: #d33f1a;
+        /* Naranja más oscuro */
+    }
+
+    .btn-link {
+        color: #e44d26;
+        /* Naranja */
+        text-decoration: none;
+        transition: color 0.3s;
+    }
+
+    .btn-link:hover {
+        color: #d33f1a;
+        /* Naranja más oscuro */
+    }
+</style>
+
+<body class="d-flex align-items-center justify-content-center vh-100">
+
+    <div class="card p-4">
+        <h3 class="mb-4 text-center card-title">Iniciar Sesión</h3>
 
         <form action="{{ route('login.submit') }}" method="post">
             @csrf
@@ -24,9 +84,9 @@
                 <input id="email" type="email" class="form-control @error('email') is-invalid @enderror"
                     name="email" value="{{ old('email') }}" required autocomplete="email" autofocus>
                 @error('email')
-                    <span class="invalid-feedback" role="alert">
-                        <strong>{{ $message }}</strong>
-                    </span>
+                    <div class="invalid-feedback">
+                        {{ $message }}
+                    </div>
                 @enderror
             </div>
 
