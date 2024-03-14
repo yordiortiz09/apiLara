@@ -81,6 +81,13 @@
             </div>
         @endif
 
+        @if (session('errors') && session('errors')->has('throttle'))
+            <div class="alert alert-danger" role="alert">
+                {{ session('errors')->first('throttle') }}
+            </div>
+        @endif
+
+
         <form action="{{ route('login.submit') }}" method="post">
             @csrf
 

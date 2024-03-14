@@ -71,7 +71,7 @@
 <body class="d-flex align-items-center justify-content-center vh-100 bg-dark">
 
     <div class="card p-4">
-        <h1 class="mb-4 text-center">Verificación de Código</h1>
+        <h1 class="mb-4 text-center">Verificación de 2 pasos</h1>
 
         @if ($errors->any())
             <div class="alert alert-danger">

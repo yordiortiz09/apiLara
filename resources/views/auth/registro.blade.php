@@ -156,7 +156,7 @@
     <script type="text/javascript">
         var onloadCallback = function() {
             grecaptcha.render('html_element', {
-                'sitekey': '6LfQkV8pAAAAALQAt1K2fJYjdG47IPXO4OHSnCU0',
+                'sitekey': '{{ env('RECAPTCHA_SITE_KEY') }}',
                 'theme': 'dark'
 
             });

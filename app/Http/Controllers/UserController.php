@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Jobs\email2;
 use App\Jobs\mensajes;
 use App\Jobs\sms;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -23,21 +25,21 @@ class UserController extends Controller
 
     {
 
-        return view('email.login');
+        return view('auth.login');
     }
     public function mostrarFormularioRegistro()
     {
-        return view('email.registro');
+        return view('auth.registro');
     }
 
     public function mostrarFormularioVerificacion()
     {
-        return view('email.verificarCodigo');
+        return view('auth.verificarCodigo');
     }
 
     public function mostrarBienvenida()
     {
-        return view('email.bienvenido');
+        return view('auth.bienvenido');
     }
 
 
@@ -161,53 +163,88 @@ class UserController extends Controller
 
     public function inicioSesion(Request $request)
     {
-        $validacion = Validator::make(
-            $request->all(),
-            [
-                'email' => 'required|email',
-                'password' => 'required',
-            ]
-        );
+        try {
+            // Realiza la validación del formulario
+            $validacion = Validator::make(
+                $request->all(),
+                [
+                    'email' => 'required|email',
+                    'password' => 'required',
+                ]
+            );
 
-        if ($validacion->fails()) {
-            return redirect('login.form')->withErrors($validacion);
-        }
-
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return redirect()->route('login.form')->withErrors(['user' => 'El usuario y/o la contraseña ingresados son incorrectos.']);
-        }
-
-        Log::info("ℹInformación después de recuperar al usuario: " . json_encode(['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'role' => $user->rol_id]) . ' - Hora: ' . now());
-
-        if ($user->rol_id != 1) {
-            $time = now();
-            Log::info("Usuario inició sesión: " . json_encode(['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'role' => $user->rol_id]) . ' - Hora: ' . now());
-            Auth::login($user);
-            return redirect()->route('bienvenido');
-        } else {
-            $user->verification_code = $this->generarCodigoVerificacion();
-            $user->verification_code_expires_at = now()->addMinutes(10);
-            $user->save();
-
-            if ($user->verification_code && now()->lt($user->verification_code_expires_at)) {
-                $time = now();
-
-                $url = URL::temporarySignedRoute('verificarCodigo', now()->addMinutes(5), ['user' => $user->id]);
-                Log::info("Usuario administrador autenticado: " . json_encode(['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email]) . ' - Fase de autenticación completada - Hora: ' . $time);
-                sms::dispatch($user)->onQueue('sms')->onConnection('database')->delay(now()->addSeconds(5));
-
-                return redirect($url);
-            } else {
-                Auth::logout();
-                return redirect()->route('login.form')->withErrors([
-                    'verification' => 'Por favor, verifica tu código de verificación antes de iniciar sesión.',
-                ]);
+            if ($validacion->fails()) {
+                return redirect('login.form')->withErrors($validacion);
             }
+
+            $user = User::where('email', $request->email)->first();
+
+            if (!$user || !Hash::check($request->password, $user->password)) {
+                $this->incrementarIntentosFallidos($request);
+
+                return redirect()->route('login.form')->withErrors(['user' => 'El usuario y/o la contraseña ingresados son incorrectos.']);
+            }
+
+            $this->resetearIntentosFallidos($request);
+
+            if ($user->rol_id != 1) {
+                $time = now();
+                Log::info("Usuario inició sesión: " . json_encode(['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'role' => $user->rol_id]) . ' - Hora: ' . now());
+                Auth::login($user);
+                return redirect()->route('bienvenido');
+            } else {
+                $user->verification_code = $this->generarCodigoVerificacion();
+                $user->verification_code_expires_at = now()->addMinutes(10);
+                $user->save();
+
+                if ($user->verification_code && now()->lt($user->verification_code_expires_at)) {
+                    $time = now();
+
+                    $url = URL::temporarySignedRoute('verificarCodigo', now()->addMinutes(5), ['user' => $user->id]);
+                    Log::info("Usuario administrador autenticado: " . json_encode(['user_id' => $user->id, 'name' => $user->name, 'email' => $user->email]) . ' - Fase de autenticación completada - Hora: ' . $time);
+
+                    sms::dispatch($user)->onQueue('sms')->onConnection('database')->delay(now()->addSeconds(5));
+
+                    return redirect($url);
+                } else {
+                    Auth::logout();
+                    return redirect()->route('login.form')->withErrors([
+                        'verification' => 'Por favor, verifica tu código de verificación antes de iniciar sesión.',
+                    ]);
+                }
+            }
+        } catch (ThrottleRequestsException $exception) {
+            return redirect()->route('login.form')->withErrors(['throttle' => 'Demasiados intentos fallidos. Por favor, inténtalo nuevamente más tarde.']);
         }
     }
 
+    private function incrementarIntentosFallidos(Request $request)
+    {
+        $key = $this->getThrottleKey($request);
+
+        RateLimiter::hit(
+            $key,
+            now()->addSeconds(30)
+        );
+
+
+        if (RateLimiter::tooManyAttempts($key, $maxAttempts = 2)) {
+            Log::warning("Intento de inicio de sesión bloqueado: " . $request->ip() . ' - Hora: ' . now());
+            abort(429);
+        }
+    }
+
+    private function resetearIntentosFallidos(Request $request)
+    {
+        $key = $this->getThrottleKey($request);
+
+        RateLimiter::clear($key);
+    }
+
+    private function getThrottleKey(Request $request)
+    {
+        return sha1($request->ip());
+    }
     public function logout()
     {
         if (Auth::check()) {

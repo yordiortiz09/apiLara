@@ -30,7 +30,10 @@ Route::group(['middleware' => 'redirectIfAuthenticated'], function () {
 
 
 
+
+
 Route::get('/bienvenido', [UserController::class, 'mostrarBienvenida'])
+
     ->name('bienvenido')->middleware('auth');
 Route::group(['middleware' => ['verificacionCompletada']], function () {
     Route::get('/verificar-codigo', [UserController::class, 'mostrarFormularioVerificacion'])->name('verificarCodigo')->middleware('signed');
